@@ -350,6 +350,7 @@ MovingSphere createMovingSphere(vec3 center0, vec3 center1, float radius, float 
 vec3 center(MovingSphere mvsphere, float time)
 {
 	//Program it
+    vec3 moving_center = mvsphere.center0 + (time - mvsphere.time0) / (mvsphere.time1 - mvsphere.time0) * (mvsphere.center1 - mvsphere.center0);
     return moving_center;
 }
 
