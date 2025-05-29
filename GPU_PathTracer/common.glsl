@@ -138,8 +138,17 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
     float time = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
     
     //Calculate eye_offset and ray direction
+    
+    float ndc_x = (pixel_sample.x / iResolution.x) - 0.5;
+    float ndc_y = (pixel_sample.y / iResolution.y) - 0.5;
 
-    return createRay(eye_offset, normalize(ray direction), time);
+    float x_focal = cam.width * ndc_x * cam.focusDist;
+    float y_focal = cam.height * ndc_y * cam.focusDist;
+    
+    vec3 ray_dir = (cam.u * (x_focal - ls.x) + cam.v * (y_focal - ls.y) - cam.n * cam.focusDist * cam.planeDist);
+    vec3 eye_offset = cam.eye + cam.u * ls.x + cam.v * ls.y;
+
+    return createRay(eye_offset, normalize(ray_dir), time);
 }
 
 // MT_ material type
