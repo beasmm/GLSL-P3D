@@ -213,9 +213,10 @@ struct HitRecord
 };
 
 
-float schlick(float cosine, float refIdx)
-{
-    //INSERT YOUR CODE HERE
+float schlick(float cosine, float refIdx) {
+    float r0 = (1.0 - refIdx) / (1.0 + refIdx);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
@@ -244,7 +245,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
             cosine = refraction cosine for schlick; 
-            atten = apply Beer's law by using rec.material.refractColor
+            // atten = apply Beer's law by using rec.material.refractColor TODO 
         }
         else  //hit from outside
         {
