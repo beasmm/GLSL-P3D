@@ -391,9 +391,32 @@ vec3 center(MovingSphere mvsphere, float time)
 
 bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    //INSERT YOUR CODE HERE
-    //calculate a valid t and normal
-	
+    float b, c, discriminant, t;
+    Vector normal;
+
+	Vector OC = s.center - r.origin;
+
+    b = r.direction * OC;
+    c = OC * OC - s.SqRadius;
+
+    if (c > 0.0f) { //origin is outside sphere
+        if (b <= 0.0f)
+            return false;   //sphere is behjind the ray
+        else {
+            d = b * b - c;
+            if (d <= 0.0f)
+                return false; //no intersection
+            else {
+                t = b - sqrt(d);
+                normal = (r.origin + r.direction * t - s.center).normalize();
+            }
+        }
+    } else {    //origin is inside sphere
+        d = b * b - c;
+        t = b + sqrt(d);
+        normal = (r.origin + r.direction * t - s.center).normalize();
+    }
+
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
