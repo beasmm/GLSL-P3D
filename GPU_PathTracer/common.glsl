@@ -421,7 +421,7 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal
+        rec.normal = normal;
         return true;
     }
     else return false;
@@ -429,22 +429,37 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    float B, C, delta;
-    bool outside;
-    float t;
+    float A, B, C, delta;
+    // bool outside;
+    float t; 
+
 
 
      //INSERT YOUR CODE HERE
      //Calculate the moving center
     //calculate a valid t and normal
-	
-    if(t < tmax && t > tmin) {
-        rec.t = t;
-        rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal;
-        return true;
+    vec3 moving_center = center(s, r.t);
+    vec3 OC = moving_center - r.o;
+
+    A = dot(r.d, r.d);
+    B = dot(r.d, OC);
+    C = dot(OC, OC) - s.radius * s.radius;
+    delta = B * B - C;
+
+    if (delta < 0.0) return false; //no intersection
+
+    float sqrt_delta = sqrt(delta);
+    float t = (-B - sqrt_delta) / A;
+    if (t < tmin || t > tmax) {
+        t = (-B + sqrt_d) / A;
+        if (t < tmin || t > tmax)
+            return false;
     }
-    else return false;
+
+    rec.t = t;
+    rec.pos = pointOnRay(r, t);
+    rec.normal = (rec.pos - moving_center).normalize();
+    return true;
 }
 
 struct pointLight {
