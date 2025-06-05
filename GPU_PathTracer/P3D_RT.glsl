@@ -231,7 +231,14 @@ vec3 rayColor(Ray r)
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
-            {   //  insert your code here    
+            {   
+                throughput *= atten;
+                r = scatterRay;
+            }
+            else
+            {
+                col += throughput * rec.material.emissive;
+                break;  //no more scattering, exit loop 
             }
         
         }
