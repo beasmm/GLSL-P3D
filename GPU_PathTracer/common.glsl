@@ -252,7 +252,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-            cosine = rec.material.refIdx * dot(rIn.d, rec.normal); //Schlick's cosine approximation
+            cosine = dot(rIn.d, rec.normal); //Schlick's cosine approximation
 
             //Beer's Law
             float distance = rec.t;
@@ -262,7 +262,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         {
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rIn.d, rec.normal); 
+            cosine = dot(rIn.d, rec.normal);
         }
 
         //Use probabilistic math to decide if scatter a reflected ray or a refracted ray
