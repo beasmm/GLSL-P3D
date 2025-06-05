@@ -335,14 +335,12 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 
     float aux = f * dot(edge2, q);
     
-    vec3 normal = cross((v1 - v0), (v2 - v0));
-    normalize(normal);
 
     if(aux < tmax && aux > tmin)
     {
         rec.t = aux;
-        rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
+        rec.normal = normalize(cross(edge1, edge2));
         return true;
     }
     return false;
