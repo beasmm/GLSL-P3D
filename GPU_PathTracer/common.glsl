@@ -255,10 +255,6 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
             cosine = -dot(rIn.d, rec.normal); 
-
-            //Beer's Law
-            float distance = rec.t;
-            atten = exp(-rec.material.refractColor * distance); 
         }
         else  //hit from outside
         {
