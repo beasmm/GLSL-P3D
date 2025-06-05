@@ -248,11 +248,13 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         float niOverNt;
         float cosine;
 
-        if(dot(rIn.d, rec.normal) > 0.0) //hit inside
+        bool entering = dot(rIn.d, rec.normal) < 0.0;
+
+        if(entering) //hit inside
         {
-            outwardNormal = -rec.normal;
-            niOverNt = rec.material.refIdx;
-            cosine = rec.material.refIdx * dot(rIn.d, rec.normal); //Schlick's cosine approximation
+            outwardNormal = rec.normal;
+            niOverNt = 1.0 / rec.material.refIdx;
+            cosine = -dot(rIn.d, rec.normal); 
 
             //Beer's Law
             float distance = rec.t;
@@ -260,36 +262,34 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         }
         else  //hit from outside
         {
-            outwardNormal = rec.normal;
-            niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rIn.d, rec.normal); 
+            outwardNormal = -rec.normal;
+            niOverNt = rec.material.refIdx;
+            cosine = rec.material.refIdx * dot(rIn.d, rec.normal);
         }
 
-        //Use probabilistic math to decide if scatter a reflected ray or a refracted ray
+        if(!entering) {
+            float distance = rec.t;
+            atten = exp(-rec.material.refractColor * distance); 
+        }
+
         vec3 refracted = refract(normalize(rIn.d), outwardNormal, niOverNt);
-        bool canRefract = length(refracted) > 0.0;
-
-
         float reflectProb;
-
-        if (canRefract) {
+        
+        if (length(refracted) > 0.0) {
             reflectProb = schlick(cosine, rec.material.refIdx);
-        }
-        else {
-            reflectProb = 1.0; //total internal reflection
+        } else {
+            reflectProb = 1.0; // Total internal reflection
         }
 
-        if( hash1(gSeed) < reflectProb)  {
+        if(hash1(gSeed) < reflectProb) {
             vec3 reflected = reflect(normalize(rIn.d), outwardNormal);
             rScattered = createRay(rec.pos, normalize(reflected), rIn.t);
-        } 
-        else {
+        } else {
             rScattered = createRay(rec.pos, normalize(refracted), rIn.t);
         }
 
         return true;
     }
-    return false;
 }
 
 struct Triangle {vec3 a; vec3 b; vec3 c; };
