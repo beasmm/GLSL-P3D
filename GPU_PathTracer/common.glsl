@@ -145,7 +145,9 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
     float x_focal = cam.width * ndc_x * cam.focusDist;
     float y_focal = cam.height * ndc_y * cam.focusDist;
     
-    vec3 ray_dir = (cam.u * (x_focal - ls.x) + cam.v * (y_focal - ls.y) - cam.n * cam.focusDist * cam.planeDist);
+    vec3 focal_point = cam.u * x_focal + cam.v * y_focal - cam.n * cam.focusDist;
+    vec3 ray_dir = focal_point - cam.u * ls.x - cam.v * ls.y;
+
     vec3 eye_offset = cam.eye + cam.u * ls.x + cam.v * ls.y;
 
     return createRay(eye_offset, normalize(ray_dir), time);
@@ -329,15 +331,12 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
         return false;
 
     float t_aux = f * dot(edge2, q);
-    
-    vec3 normal = cross((v1 - v0), (v2 - v0));
-    normalize(normal);
 
     if(t_aux > tmin)
     {
         rec.t = t_aux;
-        rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
+        rec.normal = normalize(cross(edge1, edge2));
         return true;
     }
     return false;
