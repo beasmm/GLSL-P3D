@@ -223,14 +223,24 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
     if(rec.material.type == MT_DIFFUSE)
     {
-        //INSERT CODE HERE,
+        vec3 target = rec.pos + rec.normal + randomInUnitSphere(gSeed);
+        rScattered = createRay(rec.pos, normalize(target - rec.pos), rIn.t);
         atten = rec.material.albedo * max(dot(rScattered.d, rec.normal), 0.0) / pi;
         return true;
     }
     if(rec.material.type == MT_METAL)
     {
        //INSERT CODE HERE, consider fuzzy reflections
+        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
+        rScattered = createRay(rec.pos, reflected + rec.material.roughness * randomInUnitSphere(gSeed), rIn.t);
+
         atten = rec.material.specColor;
+
+        if (dot(rScattered.d, rec.normal) < 0.0) //only reflect if the ray is not going inside the surface
+        {
+            rScattered.d = vec3(0.0); //no scattering
+            return false;
+        }
         return true;
     }
     if(rec.material.type == MT_DIELECTRIC)
@@ -244,8 +254,11 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-            cosine = refraction cosine for schlick; 
-            // atten = apply Beer's law by using rec.material.refractColor TODO 
+            cosine = rec.material.refIdx * dot(rIn.d, rec.normal); //Schlick's cosine approximation
+
+            //Beer's Law
+            float distance = rec.t;
+            atten = exp(-rec.material.refractColor * distance); 
         }
         else  //hit from outside
         {
@@ -255,18 +268,25 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         }
 
         //Use probabilistic math to decide if scatter a reflected ray or a refracted ray
+        vec3 refracted = refract(normalize(rIn.d), outwardNormal, niOverNt);
+        bool canRefract = length(refracted) > 0.0;
+
 
         float reflectProb;
 
-        //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
-        //else reflectProb = 1.0;
+        if (canRefract) {
+            reflectProb = schlick(cosine, rec.material.refIdx);
+        }
+        else {
+            reflectProb = 1.0; //total internal reflection
+        }
 
-        if( hash1(gSeed) < reflectProb)  //Reflection
-        // rScattered = calculate reflected ray
-         
-        //else  //Refraction
-        // rScattered = calculate refracted ray
-          
+        if( hash1(gSeed) < reflectProb)  {
+            vec3 reflected = reflect(normalize(rIn.d), outwardNormal);
+            rScattered = createRay(rec.pos, normalize(reflected), rIn.t);
+        } 
+        else {
+            rScattered = createRay(rec.pos, normalize(refracted), rIn.t);
         }
 
         return true;
@@ -288,37 +308,37 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
     //INSERT YOUR CODE HERE
     //calculate a valid t and normal
 
-    Vector v0 = t.points[0];
-    Vector v1 = t.points[1];
-    Vector v2 = t.points[2];
+    vec3 v0 = t.a;
+    vec3 v1 = t.b;
+    vec3 v2 = t.c;
 
-    Vector edge1 = v1 - v0;
-    Vector edge2 = v2 - v0;
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
 
-    Vector h = r.direction % edge2;
-    float a = edge1 * h;
+    vec3 h = cross(r.d, edge2);
+    float a = dot(edge1, h);
 
     float f = 1.0f / a;
-    Vector s = r.origin - v0;
-    float u = f * (s * h);
+    vec3 s = r.o - v0;
+    float u = f * dot(s, h);
 
     if (u < 0.0f || u > 1.0f)
         return false;
 
-    Vector q = s % edge1;
-    float v = f * (r.direction * q);
+    vec3 q = cross(s, edge1);
+    float v = f * dot(r.d, q);
 
     if (v < 0.0f || u + v > 1.0f)
         return false;
 
-    float t = f * (edge2 * q);
+    float aux = f * dot(edge2, q);
     
-    Vector normal = (v1 - v0) % (v2 - v0);
-    normal.normalize();
+    vec3 normal = cross((v1 - v0), (v2 - v0));
+    normalize(normal);
 
-    if(t < tmax && t > tmin)
+    if(aux < tmax && aux > tmin)
     {
-        rec.t = t;
+        rec.t = aux;
         rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
         return true;
@@ -392,36 +412,36 @@ vec3 center(MovingSphere mvsphere, float time)
 
 bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    float b, c, discriminant, t;
-    Vector normal;
+    float b, c, d, t;
+    vec3 normal;
 
-	Vector OC = s.center - r.origin;
+    vec3 OC = s.center - r.o;
 
-    b = r.direction * OC;
-    c = OC * OC - s.SqRadius;
+    b = dot(OC, r.d);
+    c = dot(OC, OC) - s.radius * s.radius;
 
     if (c > 0.0f) { //origin is outside sphere
         if (b <= 0.0f)
-            return false;   //sphere is behjind the ray
+            return false;   //sphere is behind the ray
         else {
             d = b * b - c;
             if (d <= 0.0f)
                 return false; //no intersection
             else {
                 t = b - sqrt(d);
-                normal = (r.origin + r.direction * t - s.center).normalize();
+                normal = normalize(r.o + r.d * t - s.center);
             }
         }
     } else {    //origin is inside sphere
         d = b * b - c;
         t = b + sqrt(d);
-        normal = (r.origin + r.direction * t - s.center).normalize();
+        normal = normalize(r.o + r.d * t - s.center);
     }
 
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal
+        rec.normal = normal;
         return true;
     }
     else return false;
@@ -429,15 +449,35 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    float B, C, delta;
-    bool outside;
     float t;
+    vec3 normal;
 
+    // Calculate the moving center at the ray's time
+    vec3 center_now = center(s, r.t);
 
-     //INSERT YOUR CODE HERE
-     //Calculate the moving center
-    //calculate a valid t and normal
-	
+    // Ray-sphere intersection (same as static sphere, but with moving center)
+    vec3 OC = center_now - r.o;
+    float b = dot(OC, r.d);
+    float c = dot(OC, OC) - s.radius * s.radius;
+
+    if (c > 0.0f) { // origin is outside sphere
+        if (b <= 0.0f)
+            return false;   // sphere is behind the ray
+        else {
+            float d = b * b - c;
+            if (d <= 0.0f)
+                return false; // no intersection
+            else {
+                t = b - sqrt(d);
+                normal = normalize(r.o + r.d * t - center_now);
+            }
+        }
+    } else {    // origin is inside sphere
+        float d = b * b - c;
+        t = b + sqrt(d);
+        normal = normalize(r.o + r.d * t - center_now);
+    }
+
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
