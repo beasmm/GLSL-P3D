@@ -196,16 +196,36 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
     return hit;
 }
 
-vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
-    vec3 diffCol, specCol;
-    vec3 colorOut = vec3(0.0, 0.0, 0.0);
-    float shininess;
-    HitRecord dummy;
+vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
+    vec3 toLight = normalize(pl.pos - rec.pos);
+    vec3 normal = normalize(rec.normal);
+    vec3 viewDir = normalize(-r.d); // View direction is the inverse of the ray
 
-   //INSERT YOUR CODE HERE
-    
-	return colorOut; 
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.o = rec.pos + 0.001 * normal;
+    shadowRay.d = toLight;
+
+    HitRecord dummy;
+    if (hit_world(shadowRay, 0.001, length(pl.pos - rec.pos), dummy)) {
+        // In shadow
+        return vec3(0.0);
+    }
+
+    // Diffuse component
+    float diff = max(dot(normal, toLight), 0.0);
+    vec3 diffCol = diff * rec.material.albedo * pl.color;
+
+    // Specular component
+    vec3 reflectDir = reflect(-toLight, normal);
+    float shininess = 32.0; // Use a constant shininess value
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    vec3 specColor = vec3(1.0); // Use white as the specular color
+    vec3 specCol = spec * specColor * pl.color;
+
+    return diffCol + specCol;
 }
+
 
 #define MAX_BOUNCES 10
 
@@ -213,44 +233,51 @@ vec3 rayColor(Ray r)
 {
     HitRecord rec;
     vec3 col = vec3(0.0);
-    vec3 throughput = vec3(1.0f, 1.0f, 1.0f);
+    vec3 throughput = vec3(1.0);
+
     for(int i = 0; i < MAX_BOUNCES; ++i)
     {
         if(hit_world(r, 0.001, 10000.0, rec))
         {
-            //calculate direct lighting with 3 white point lights:
+            // === 1. Add direct lighting from three point lights ===
             {
-                //createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0))
-                //createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0, 1.0, 1.0))
-                //createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0, 1.0, 1.0))
+                pointLight pl0 = createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0));
+                pointLight pl1 = createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0));
+                pointLight pl2 = createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0));
 
-                //for instance: col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0)), r, rec) * throughput;
+                col += throughput * directlighting(pl0, r, rec);
+                col += throughput * directlighting(pl1, r, rec);
+                col += throughput * directlighting(pl2, r, rec);
             }
-           
-            //calculate secondary ray and update throughput
+
+            // === 2. Add emissive term ===
+            col += throughput * rec.material.emissive;
+
+            // === 3. Scatter to secondary ray and update throughput ===
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
-            {   
+            {
                 throughput *= atten;
                 r = scatterRay;
             }
             else
             {
-                col += throughput * rec.material.emissive;
-                break;  //no more scattering, exit loop 
+                break;  // No further scattering — end path
             }
-        
         }
-        else  //background
+        else  // === Background sky color ===
         {
             float t = 0.8 * (r.d.y + 1.0);
-            col += throughput * mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
+            vec3 skyColor = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
+            col += throughput * skyColor;
             break;
         }
     }
+
     return col;
 }
+
 
 #define MAX_SAMPLES 10000.0
 
