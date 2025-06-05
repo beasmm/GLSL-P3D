@@ -145,7 +145,9 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
     float x_focal = cam.width * ndc_x * cam.focusDist;
     float y_focal = cam.height * ndc_y * cam.focusDist;
     
-    vec3 ray_dir = (cam.u * (x_focal - ls.x) + cam.v * (y_focal - ls.y) - cam.n * cam.focusDist * cam.planeDist);
+    vec3 focal_point = cam.u * x_focal + cam.v * y_focal - cam.n * cam.focusDist;
+    vec3 ray_dir = focal_point - cam.u * ls.x - cam.v * ls.y;
+
     vec3 eye_offset = cam.eye + cam.u * ls.x + cam.v * ls.y;
 
     return createRay(eye_offset, normalize(ray_dir), time);
