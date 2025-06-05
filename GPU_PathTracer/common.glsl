@@ -212,7 +212,6 @@ struct HitRecord
     Material material;
 };
 
-
 float schlick(float cosine, float refIdx) {
     float r0 = (1.0 - refIdx) / (1.0 + refIdx);
     r0 = r0 * r0;
@@ -230,7 +229,6 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     }
     if(rec.material.type == MT_METAL)
     {
-       //INSERT CODE HERE, consider fuzzy reflections
         vec3 reflected = reflect(normalize(rIn.d), rec.normal);
         rScattered = createRay(rec.pos, reflected + rec.material.roughness * randomInUnitSphere(gSeed), rIn.t);
 
@@ -243,8 +241,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         }
         return true;
     }
-    if(rec.material.type == MT_DIELECTRIC)
-    {
+    if(rec.material.type == MT_DIELECTRIC) {
         atten = vec3(1.0);
         vec3 outwardNormal;
         float niOverNt;
@@ -305,8 +302,8 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    //INSERT YOUR CODE HERE
     //calculate a valid t and normal
+    normalize(r.d);
 
     vec3 v0 = t.a;
     vec3 v1 = t.b;
@@ -331,14 +328,14 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
     if (v < 0.0f || u + v > 1.0f)
         return false;
 
-    float aux = f * dot(edge2, q);
+    float t_aux = f * dot(edge2, q);
     
     vec3 normal = cross((v1 - v0), (v2 - v0));
     normalize(normal);
 
-    if(aux < tmax && aux > tmin)
+    if(t_aux > tmin)
     {
-        rec.t = aux;
+        rec.t = t_aux;
         rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
         return true;
