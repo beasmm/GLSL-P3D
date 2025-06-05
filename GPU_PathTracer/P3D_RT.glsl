@@ -231,7 +231,8 @@ vec3 rayColor(Ray r)
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
-            {   //  insert your code here    }
+            {   //  insert your code here    
+            }
         
         }
         else  //background
