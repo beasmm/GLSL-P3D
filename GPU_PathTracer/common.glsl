@@ -242,55 +242,59 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         }
         return true;
     }
-    if(rec.material.type == MT_DIELECTRIC) {
-        atten = vec3(1.0);
+    if (rec.material.type == MT_DIELECTRIC) {
         vec3 outwardNormal;
+        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
+        vec3 refracted;
         float niOverNt;
         float cosine;
-
-        if(dot(rIn.d, rec.normal) > 0.0) //hit inside
-        {
-            outwardNormal = -rec.normal;
-            niOverNt = rec.material.refIdx;
-            cosine = rec.material.refIdx * dot(rIn.d, rec.normal); //Schlick's cosine approximation
-
-            //Beer's Law
-            float distance = rec.t;
-            atten = exp(-rec.material.refractColor * distance); 
-        }
-        else  //hit from outside
-        {
-            outwardNormal = rec.normal;
-            niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rIn.d, rec.normal); 
-        }
-
-        //Use probabilistic math to decide if scatter a reflected ray or a refracted ray
-        vec3 refracted = refract(normalize(rIn.d), outwardNormal, niOverNt);
-        bool canRefract = length(refracted) > 0.0;
-
-
         float reflectProb;
+        bool isExiting = dot(rIn.d, rec.normal) > 0.0;
+
+        float n1 = 1.0; // air
+        float n2 = rec.material.refIdx;
+
+        // Set normal direction and IOR ratio depending on entering or exiting
+        if (isExiting) {
+            outwardNormal = -rec.normal;
+            niOverNt = n2 / n1;
+            cosine = n2 * dot(rIn.d, rec.normal) / length(rIn.d);
+        } else {
+            outwardNormal = rec.normal;
+            niOverNt = n1 / n2;
+            cosine = -dot(rIn.d, rec.normal) / length(rIn.d);
+        }
+
+        // Apply Beer's Law only if passing through absorbing medium (i.e., not air)
+        if (rec.material.refIdx != 1.0) {
+            float distance = rec.t;
+            atten = exp(-rec.material.refractColor * distance);
+        } else {
+            atten = vec3(1.0);
+        }
+
+        // Try to refract
+        refracted = refract(normalize(rIn.d), outwardNormal, niOverNt);
+        bool canRefract = length(refracted) > 0.0;
 
         if (canRefract) {
             reflectProb = schlick(cosine, rec.material.refIdx);
-        }
-        else {
-            reflectProb = 1.0; //total internal reflection
+        } else {
+            reflectProb = 1.0; // Total internal reflection
         }
 
-        if( hash1(gSeed) < reflectProb)  {
-            vec3 reflected = reflect(normalize(rIn.d), outwardNormal);
+        if (hash1(gSeed) < reflectProb) {
             rScattered = createRay(rec.pos, normalize(reflected), rIn.t);
-        } 
-        else {
+        } else {
             rScattered = createRay(rec.pos, normalize(refracted), rIn.t);
         }
 
         return true;
     }
+
     return false;
 }
+
 
 struct Triangle {vec3 a; vec3 b; vec3 c; };
 
