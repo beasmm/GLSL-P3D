@@ -226,6 +226,40 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
     return diffCol + specCol;
 }
 
+// new code for quad light
+vec3 directLightingFromQuadLight(QuadLight ql, Ray r, HitRecord rec) {
+    // Sample a random point on the quad light
+    vec3 lightPos = ql.quad.a + hash3(gSeed) * (ql.quad.b - ql.quad.a) + 
+                   hash3(gSeed) * (ql.quad.d - ql.quad.a);
+    
+    vec3 toLight = normalize(lightPos - rec.pos);
+    float distance = length(lightPos - rec.pos);
+    
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.o = rec.pos + 0.001 * rec.normal;
+    shadowRay.d = toLight;
+
+    HitRecord dummy;
+    if (hit_world(shadowRay, 0.001, distance, dummy)) {
+        return vec3(0.0); // In shadow
+    }
+
+    // Calculate the diffuse component
+    float diff = max(dot(rec.normal, toLight), 0.0);
+    
+    // Calculate light area for proper normalization
+    vec3 edge1 = ql.quad.b - ql.quad.a;
+    vec3 edge2 = ql.quad.d - ql.quad.a;
+    float area = length(cross(edge1, edge2));
+    
+    // Solid angle approximation
+    float lightCos = max(dot(-toLight, normalize(cross(edge1, edge2)), 0.0);
+    float solidAngle = (lightCos * area) / (distance * distance);
+    
+    return diff * ql.color * ql.intensity * solidAngle;
+}
+
 
 #define MAX_BOUNCES 10
 
@@ -240,6 +274,7 @@ vec3 rayColor(Ray r)
         if(hit_world(r, 0.001, 10000.0, rec))
         {
             // === 1. Add direct lighting from three point lights ===
+            /*
             {
                 pointLight pl0 = createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0));
                 pointLight pl1 = createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0));
@@ -249,6 +284,19 @@ vec3 rayColor(Ray r)
                 col += throughput * directlighting(pl1, r, rec);
                 col += throughput * directlighting(pl2, r, rec);
             }
+            */
+
+
+            // Quad light
+            QuadLight ql = createQuadLight(
+                vec3(-2.0, 5.0, -2.0),
+                vec3(2.0, 5.0, -2.0),   
+                vec3(2.0, 5.0, 2.0),   
+                vec3(-2.0, 5.0, 2.0),  
+                vec3(1.0, 0.9, 0.8),    
+                15.0                     
+            );
+            col += throughput * directLightingFromQuadLight(ql, r, rec);
 
             // === 2. Add emissive term ===
             col += throughput * rec.material.emissive;
