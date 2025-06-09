@@ -7,7 +7,9 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 0
+#define SCENE 0
+#define POINT false
+#define QUAD true
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -254,7 +256,7 @@ vec3 directLightingFromQuadLight(QuadLight ql, Ray r, HitRecord rec) {
     float area = length(cross(edge1, edge2));
     
     // Solid angle approximation
-    float lightCos = max(dot(-toLight, normalize(cross(edge1, edge2)), 0.0);
+    float lightCos = max(dot(-toLight, normalize(cross(edge1, edge2))), 0.0);
     float solidAngle = (lightCos * area) / (distance * distance);
     
     return diff * ql.color * ql.intensity * solidAngle;
@@ -274,7 +276,7 @@ vec3 rayColor(Ray r)
         if(hit_world(r, 0.001, 10000.0, rec))
         {
             // === 1. Add direct lighting from three point lights ===
-            /*
+            if (POINT)
             {
                 pointLight pl0 = createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0));
                 pointLight pl1 = createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0));
@@ -284,24 +286,22 @@ vec3 rayColor(Ray r)
                 col += throughput * directlighting(pl1, r, rec);
                 col += throughput * directlighting(pl2, r, rec);
             }
-            */
 
+            if (QUAD) 
+            {
+                Quad q = Quad(
+                    vec3(-2.0, 5.0, -2.0),
+                    vec3(2.0, 5.0, -2.0),   
+                    vec3(2.0, 5.0, 2.0),   
+                    vec3(-2.0, 5.0, 2.0)
+                );
+                QuadLight ql = createQuadLight(q, vec3(1.0, 0.9, 0.8), 1.0);
 
-            // Quad light
-            QuadLight ql = createQuadLight(
-                vec3(-2.0, 5.0, -2.0),
-                vec3(2.0, 5.0, -2.0),   
-                vec3(2.0, 5.0, 2.0),   
-                vec3(-2.0, 5.0, 2.0),  
-                vec3(1.0, 0.9, 0.8),    
-                15.0                     
-            );
-            col += throughput * directLightingFromQuadLight(ql, r, rec);
+                col += throughput * directLightingFromQuadLight(ql, r, rec);
+            }
 
-            // === 2. Add emissive term ===
             col += throughput * rec.material.emissive;
 
-            // === 3. Scatter to secondary ray and update throughput ===
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
@@ -311,10 +311,10 @@ vec3 rayColor(Ray r)
             }
             else
             {
-                break;  // No further scattering — end path
+                break;
             }
         }
-        else  // === Background sky color ===
+        else
         {
             float t = 0.8 * (r.d.y + 1.0);
             vec3 skyColor = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
