@@ -8,8 +8,8 @@
  #iChannel0 "self"
  
 #define SCENE 0
-#define POINT false
-#define QUAD true
+#define POINT true
+#define QUAD false
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
