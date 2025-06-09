@@ -10,6 +10,7 @@
 #define SCENE 0
 #define POINT true
 #define QUAD false
+#define MICROFACETS false
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -34,7 +35,10 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         if(hit_sphere(createSphere(vec3(4.0, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
-            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
+            if (MICROFACETS)
+                  rec.material = createPlasticMaterial(vec3(0.2), vec3(0.7, 0.6, 0.5), 0.04, 0.0)
+            else 
+                rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
         }
 
         if(hit_sphere(createSphere(vec3(-1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
