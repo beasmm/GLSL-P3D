@@ -8,8 +8,8 @@
  #iChannel0 "self"
  
 #define SCENE 0
-#define POINT true
-#define QUAD false
+#define POINT false
+#define QUAD true
 #define MICROFACETS false
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
@@ -36,7 +36,7 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         {
             hit = true;
             if (MICROFACETS)
-                  rec.material = createPlasticMaterial(vec3(0.2), vec3(0.7, 0.6, 0.5), 0.04, 0.0)
+                rec.material = createPlasticMaterial(vec3(0.2), vec3(0.7, 0.6, 0.5), 0.04, 0.0);
             else 
                 rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
         }
@@ -340,10 +340,26 @@ void main()
     vec2 mouse = iMouse.xy / iResolution.xy;
     mouse.x = mouse.x * 2.0 - 1.0;
 
-    vec3 camPos = vec3(mouse.x * 10.0, mouse.y * 5.0, 8.0);
-    vec3 camTarget = vec3(0.0, 0.0, -1.0);
+    vec3 camTarget = vec3(0.0);
+
+    // make sure camera is above the base plane
+    float minElevation = 0.05; // 3° above horizontal
+    float maxElevation = 0.6;  // 34°
+    float elevation = mix(minElevation, maxElevation, mouse.y);
+
+    float azimuth = 2.0 * 3.14159 * mouse.x; // horizontal angle
+
+    // Clamp zoom radius to a reasonable range
+    float radius = mix(5.0, 15.0, 1.0 - mouse.y);
+
+    vec3 camPos = camTarget + radius * vec3(
+        cos(elevation) * sin(azimuth),
+        sin(elevation),
+        cos(elevation) * cos(azimuth)
+    );
+
     float fovy = 60.0;
-    float aperture = 0.0;
+    float aperture = 8.0;
     float distToFocus = 1.0;
     float time0 = 0.0;
     float time1 = 1.0;
